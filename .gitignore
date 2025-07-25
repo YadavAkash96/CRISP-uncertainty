@@ -129,4 +129,4 @@ venv.bak/
 /outputs
 /multirun
 /config/data/camus_h5/*
-/checkpoints/*
+/checkpoints
