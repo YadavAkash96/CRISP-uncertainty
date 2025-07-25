@@ -78,7 +78,7 @@ class CRISP(SystemComputationMixin):
             # TODO add regression module for img latent space.
             self.regression_module = nn.Linear(self.hparams.seg_latent_size, 1)
 
-    def summarize(self, mode: str = "full") -> ModelSummary:
+    def summarize(self, mode: str = ModelSummary.MODE_DEFAULT) -> ModelSummary:
         # No predefined forward method.
         pass
 

@@ -19,7 +19,7 @@ logger:
 seed: 55
 
 trainer:
-  max_epochs: 2
+  max_epochs: 1000
 
 callbacks:
   early_stopping:

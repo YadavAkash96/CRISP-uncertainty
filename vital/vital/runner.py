@@ -17,10 +17,10 @@ from omegaconf import DictConfig, OmegaConf, open_dict
 from pytorch_lightning import Callback, Trainer, seed_everything
 from pytorch_lightning.loggers import CometLogger, LightningLoggerBase
 
-from vital.data.data_module import VitalDataModule
-from vital.systems.system import VitalSystem
-from vital.utils.logger import configure_logging
-from vital.utils.serialization import resolve_model_checkpoint_path
+from vital.vital.data.data_module import VitalDataModule
+from vital.vital.systems.system import VitalSystem
+from vital.vital.utils.logger import configure_logging
+from vital.vital.utils.serialization import resolve_model_checkpoint_path
 
 
 from torch.utils.data import DataLoader
