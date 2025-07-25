@@ -128,5 +128,5 @@ venv.bak/
 .hydra
 /outputs
 /multirun
-config/data/camus_h5/camus.h5
+config/data/camus_h5/*
 checkpoints/*

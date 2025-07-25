@@ -62,7 +62,11 @@ class PatientEvaluator(Evaluator):
         for patient in results:
             for view, data in patient.views.items():
                 pred = prob_to_categorical(data.pred)
-                correct_map = np.equal(pred, data.gt).astype(int)
+                # my changes for custom test run
+                gt = np.squeeze(data.gt, axis=1)
+
+                # correct_map = np.equal(pred, data.gt).astype(int)
+                correct_map = np.equal(pred, gt).astype(int)
                 # Flip uncertainties to get confidence scores
                 confidences.append(1 - data.uncertainty_map.flatten())
                 accuracies.append(correct_map.flatten())

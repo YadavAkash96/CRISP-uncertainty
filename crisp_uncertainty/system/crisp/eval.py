@@ -15,6 +15,7 @@ from torchmetrics.utilities.data import to_onehot
 from tqdm import tqdm
 from vital.data.camus.data_struct import ViewData
 from vital.data.config import Tags
+from vital.data.camus.customtestdata import TestViewData
 
 from crisp_uncertainty.evaluation.data_struct import ViewResult
 from crisp_uncertainty.evaluation.uncertainty.overlap import UncertaintyErrorOverlap
@@ -124,16 +125,23 @@ class EvalCRISP(UncertaintyEvaluationSystem, CRISP):
     def compute_view_uncertainty(self, view: str, data: ViewData) -> ViewResult:
         # pred = self.module(data.img_proc.to(self.device))
         # pred = F.softmax(pred, dim=1) if pred.shape[1] > 1 else torch.sigmoid(pred)
+
+        test_data_path = Path("/home/zoayada1/intern_thesis_work/RMS_SampleFinder/depends/CRISP-uncertainty/config/data/camus_h5/test_data/my_custom_dataset.h5")
+        data = TestViewData(test_data_path)
+        
         logits = [self.module(data.img_proc.to(self.device)) for _ in range(self.hparams.iterations)]
         if logits[0].shape[1] == 1:
             probs = [torch.sigmoid(logits[i]).detach() for i in range(self.hparams.iterations)]
             pred = torch.stack(probs, dim=-1).mean(-1)
         else:
             probs = [F.softmax(logits[i], dim=1).detach() for i in range(self.hparams.iterations)]
+            # print(f"prob shape:{probs[0].shape}")
             pred = torch.stack(probs, dim=-1).mean(-1)
+            # print(f"after mean prob shape:{pred.shape}")
 
         frame_uncertainties = []
         uncertainty_maps = []
+        # print(f"shape of pred array:{pred.shape}")
         for instant in range(pred.shape[0]):
             uncertainty, uncertainty_map = self.predict_uncertainty(data.img_proc[instant], pred[instant])
             frame_uncertainties.append(uncertainty)
@@ -151,11 +159,18 @@ class EvalCRISP(UncertaintyEvaluationSystem, CRISP):
         )
 
     def predict_uncertainty(self, img: Tensor, pred: Tensor) -> Tuple[float, np.array]:
+        # print(f"image pred:{pred.shape}")
         img, pred = img.to(self.device), pred.to(self.device)
         if self.hparams.data_params.out_shape[0] > 1:
-            pred = to_onehot(pred.argmax(0, keepdim=True), num_classes=self.hparams.data_params.out_shape[0])
+            # print(f"pred shape array:{pred.shape}")
+            # pred = pred.round().unsqueeze(1)
+            
+            # pred = to_onehot(pred.argmax(0, keepdim=True), num_classes=self.hparams.data_params.out_shape[0])
+            print(f"pred one hot array:{pred.shape}")
         else:
+            
             pred = pred.round().unsqueeze(1)
+            
 
         # Get input image features
         img_mu = self.img_encoder(img[None])
@@ -170,7 +185,9 @@ class EvalCRISP(UncertaintyEvaluationSystem, CRISP):
 
         # Get prediction features
         if self.hparams.variance_factor != -1:
-            pred_mu = self.seg_encoder(pred.float())
+            # pred_mu = self.seg_encoder(pred.float())
+            # below line is my change
+            pred_mu = self.seg_encoder(pred)
             pred_features = self.seg_proj(pred_mu)
             pred_features = pred_features / pred_features.norm(dim=-1, keepdim=True)
             pred_logits = pred_features @ image_features.t()
@@ -202,27 +219,40 @@ class EvalCRISP(UncertaintyEvaluationSystem, CRISP):
 
         samples = samples[indices].squeeze()
         weights = weights[indices.cpu()]
-
+        # print(f"top 50 closest match:{sample_logits[indices]}")
         # My fix 
         device = self.train_set_segs.device
         indices = indices.to(device)
         # two lines
         
         decoded = self.train_set_segs[indices].squeeze()
-        if self.seg_channels > 1:
-            decoded = to_onehot(decoded, num_classes=self.seg_channels)
+        # this train segment returns one hot code values not probabilities
+        # print(f"decode without one hot:{decoded.shape},{np.unique(decoded)}")
 
+        # to calculate probability difference
+        if self.seg_channels > 1:
+            # print(f"decode one hot:{decoded.shape},{np.unique(decoded)}")
+            decoded = to_onehot(decoded, num_classes=self.seg_channels)
+    
+        print(f"decode shape:{decoded.shape}")
         uncertainty_map = []
         for i in range(decoded.shape[0]):
             weight = weights[i]
-            # print(weight)
+            # print(weight)\
+            # print(f"shape of pred before squeeze:{pred.shape}, {decoded[i].shape}")
+            
             diff = (~torch.eq(pred.squeeze().cpu(), decoded[i].cpu().squeeze())).float()
+            # diff = pred.squeeze().cpu() - decoded[i].cpu().squeeze()         # [C, H, W]
+            
+            # prd=pred.squeeze()
+            # print(f"shape of pred after squeeze:{prd.shape}")
             uncertainty_map.append(diff[None] * weight)
             # aleatoric_map.append(decoded[i][None] * weight)
-
+            
+            
         uncertainty_map = torch.cat(uncertainty_map, dim=0)
         uncertainty_map = uncertainty_map.mean(0).squeeze()
-
+        
         if self.seg_channels > 1:
             labels_values = [label.value for label in self.hparams.data_params.labels if label.value != 0]
             uncertainty_map = uncertainty_map[labels_values, ...]
@@ -238,7 +268,7 @@ class EvalCRISP(UncertaintyEvaluationSystem, CRISP):
         # Compute frame uncertainty
         mask = pred.cpu().detach().numpy() != 0
         frame_uncertainty = (np.sum(uncertainty_map) / np.sum(mask))
-
+        print(f"uncertainty score scalar:{frame_uncertainty}")
         return frame_uncertainty, uncertainty_map
 
     def find_threshold(self, datamodule):

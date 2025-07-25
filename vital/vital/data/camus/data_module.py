@@ -10,6 +10,8 @@ from vital.data.config import DataParameters, Subset
 from vital.data.data_module import VitalDataModule
 from vital.data.mixins import StructuredDataMixin
 
+from torch.utils.data import Subset as TorchSubset
+
 
 class CamusDataModule(StructuredDataMixin, VitalDataModule):
     """Implementation of the ``VitalDataModule`` for the CAMUS dataset."""
@@ -118,7 +120,17 @@ class CamusDataModule(StructuredDataMixin, VitalDataModule):
             pin_memory=self.pin_memory,
         )
 
-    def test_dataloader(self) -> DataLoader:  # noqa: D102
-        return DataLoader(
-            self.dataset(subset=Subset.TEST), batch_size=None, num_workers=self.num_workers, pin_memory=self.pin_memory
-        )
+    # def test_dataloader(self) -> DataLoader:  # noqa: D102
+    #     return DataLoader(
+    #         self.dataset(subset=Subset.TEST), batch_size=None, num_workers=self.num_workers, pin_memory=self.pin_memory
+    #     )
+
+    def test_dataloader(self) -> DataLoader:
+            full_test_dataset = self.dataset(subset=Subset.TEST)
+            limited_dataset = TorchSubset(full_test_dataset, list(range(1)))  # 1 sample only
+            return DataLoader(
+                limited_dataset,
+                batch_size=None,
+                num_workers=self.num_workers,
+                # pin_memory=self.pin_memory  # uncomment if needed
+            )

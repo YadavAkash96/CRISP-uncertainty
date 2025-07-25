@@ -48,6 +48,11 @@ class SegmentationMetrics(PatientEvaluator):
         # Compute the distance metrics (that require the images' voxelspacing)
         # only if the requested label is present in both result and reference
         if np.any(pred_mask) and np.any(gt_mask):
+            
+            # my changes: 
+            gt_mask = np.squeeze(gt_mask, axis=0)
+            voxelspacing = voxelspacing[:-1]
+            
             metrics.update(
                 {
                     f"{label_name}_{dist}": dist_fn(pred_mask, gt_mask, voxelspacing=voxelspacing)
@@ -69,8 +74,15 @@ class SegmentationMetrics(PatientEvaluator):
         Returns:
             average results to log
         """
+        
+        # print(f"patient results type:{type(results)}") list type
+        
         full_metrics = {}
         for patient in results:
+            # print(f"patient results type:{type(patient.views)}") #dict type
+            # print(f"instant of patient:{patient.views}")
+            # print(f"voxelspacing of patient:{patient.views["voxelspacing"]}")
+            # print(f"value of patient:{patient.views}")
             for view, data in patient.views.items():
                 voxelspacing = data.voxelspacing[1:]
                 for instant, i in data.instants.items():
@@ -80,6 +92,11 @@ class SegmentationMetrics(PatientEvaluator):
                     metrics = {}
                     if len(self.labels) > 2:
                         for label in self.labels:
+                            # print(f"shape of labels:{type(label)}")
+                            # print(f"size of pred:{pred.shape}")
+                            # print(f"size of gt:{gt.shape}")
+                            # print(f"value of labels:{label.value}")
+                            # print(f"voxel size:")
                             metrics.update(self.compute_binary_metrics(pred, gt, str(label), label.value, voxelspacing))
                     else:
                         metrics.update(self.compute_binary_metrics(pred, gt, str(self.labels[1]), 1, voxelspacing))
