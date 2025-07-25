@@ -1,7 +1,7 @@
 import comet_ml  # noqa
 import hydra
 from omegaconf import DictConfig, OmegaConf
-from vital.vital.runner import VitalRunner
+from vital.runner import VitalRunner
 import sys  
 import warnings
 import os

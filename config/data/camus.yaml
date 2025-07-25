@@ -12,5 +12,5 @@ labels:
 fold: 5
 use_sequence: False
 max_patients: null
-da: null
+test_da: null
 views: ['2CH','4CH']
