@@ -126,8 +126,8 @@ class EvalCRISP(UncertaintyEvaluationSystem, CRISP):
         # pred = self.module(data.img_proc.to(self.device))
         # pred = F.softmax(pred, dim=1) if pred.shape[1] > 1 else torch.sigmoid(pred)
 
-        test_data_path = Path("/home/zoayada1/intern_thesis_work/RMS_SampleFinder/depends/CRISP-uncertainty/config/data/camus_h5/test_data/my_custom_dataset.h5")
-        data = TestViewData(test_data_path)
+        # test_data_path = Path("/home/zoayada1/intern_thesis_work/RMS_SampleFinder/depends/CRISP-uncertainty/config/data/camus_h5/test_data/my_custom_dataset.h5")
+        # data = TestViewData(test_data_path)
         
         logits = [self.module(data.img_proc.to(self.device)) for _ in range(self.hparams.iterations)]
         if logits[0].shape[1] == 1:
@@ -165,8 +165,8 @@ class EvalCRISP(UncertaintyEvaluationSystem, CRISP):
             # print(f"pred shape array:{pred.shape}")
             # pred = pred.round().unsqueeze(1)
             
-            # pred = to_onehot(pred.argmax(0, keepdim=True), num_classes=self.hparams.data_params.out_shape[0])
-            print(f"pred one hot array:{pred.shape}")
+            pred = to_onehot(pred.argmax(0, keepdim=True), num_classes=self.hparams.data_params.out_shape[0])
+            # print(f"pred one hot array:{pred.shape}")
         else:
             
             pred = pred.round().unsqueeze(1)

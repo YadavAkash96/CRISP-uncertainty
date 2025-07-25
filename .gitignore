@@ -130,3 +130,4 @@ venv.bak/
 /multirun
 config/data/camus_h5/*
 checkpoints/*
+*.zip
