@@ -87,7 +87,9 @@ class EvalCRISP(UncertaintyEvaluationSystem, CRISP):
     def on_test_epoch_start(self) -> None:
         print("Generate train features")
 
-        datamodule = self.datamodule or self.trainer.datamodule
+        # datamodule = self.datamodule or self.trainer.datamodule
+        # My working changes:
+        datamodule = getattr(self, "datamodule", None) or self.trainer.datamodule
 
         self.to(self.device)
 
@@ -201,6 +203,11 @@ class EvalCRISP(UncertaintyEvaluationSystem, CRISP):
         samples = samples[indices].squeeze()
         weights = weights[indices.cpu()]
 
+        # My fix 
+        device = self.train_set_segs.device
+        indices = indices.to(device)
+        # two lines
+        
         decoded = self.train_set_segs[indices].squeeze()
         if self.seg_channels > 1:
             decoded = to_onehot(decoded, num_classes=self.seg_channels)
