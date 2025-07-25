@@ -13,7 +13,7 @@ from torch import Tensor
 from torch.optim.optimizer import Optimizer
 from torchinfo import summary
 
-from vital.vital.data.config import DataParameters
+from vital.data.config import DataParameters
 
 
 class VitalSystem(pl.LightningModule, ABC):

@@ -29,7 +29,21 @@ class TrainCRISP(CRISP, TrainValComputationMixin):
             self._dice = DifferentiableDiceCoefficient(include_background=False, reduction="none")
 
     def trainval_step(self, batch: Any, batch_nb: int):
-        img, seg = batch[Tags.img], batch[Tags.gt]
+        
+         # My changes
+        # batch can be dict (train) or PatientData (test)
+        if isinstance(batch, dict):
+            img, seg = batch[Tags.img], batch[Tags.gt]
+        else:
+            # PatientData case:
+            # Choose one view, e.g. '2CH' or the first view available
+            view_key = list(batch.views.keys())[0]  # '2CH' or '4CH' etc.
+            view_data = batch.views[view_key]
+            img = view_data.img_proc  # tensor on device
+            seg = view_data.gt_proc 
+
+        
+        # img, seg = batch[Tags.img], batch[Tags.gt]
         if self.trainer.datamodule.data_params.out_shape[0] > 1:
             seg_onehot = to_onehot(seg, num_classes=self.trainer.datamodule.data_params.out_shape[0]).float()
         else:
