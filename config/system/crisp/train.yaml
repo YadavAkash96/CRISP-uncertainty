@@ -6,6 +6,7 @@ defaults:
 
 module: null # No module for training crisp, module (encoder/decoder) is created in init method.
 
+
 cross_entropy_weight:  0.1
 dice_weight:  1
 clip_weight:  1

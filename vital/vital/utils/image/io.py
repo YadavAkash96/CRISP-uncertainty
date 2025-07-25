@@ -6,6 +6,23 @@ import numpy as np
 import SimpleITK
 from PIL import Image, ImageSequence
 
+def load_nii(filepath: Path) -> Tuple[np.ndarray, Tuple[Tuple[Number, ...], ...]]:
+    """Loads a NIfTI (.nii or .nii.gz) image and returns the image and its metadata.
+
+    Args:
+        filepath: Path to the image.
+
+    Returns:
+        - (H, W, [D]) Image array (3D or 2D depending on input).
+        - Collection of metadata (size, origin, spacing, direction).
+    """
+    image = SimpleITK.ReadImage(str(filepath))
+    info = (image.GetSize(), image.GetOrigin(), image.GetSpacing(), image.GetDirection())
+    im_array = np.squeeze(SimpleITK.GetArrayFromImage(image))  # Converts to numpy (D, H, W)
+
+    # SimpleITK loads images as (depth, height, width), often we want (H, W, D) or (H, W)
+    # You can keep as is or reorder axes depending on your use case.
+    return im_array, info
 
 def load_mhd(filepath: Path) -> Tuple[np.ndarray, Tuple[Tuple[Number, ...], ...]]:
     """Loads a mhd image and returns the image and its metadata.

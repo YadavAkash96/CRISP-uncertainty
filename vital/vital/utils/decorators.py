@@ -162,6 +162,7 @@ def auto_move_data(fn: Callable) -> Callable:
         # tensor([[0., 0., 0.]], device='cuda:0')
 
     """
+    """
 
     @wraps(fn)
     def auto_transfer_args(self, *args, **kwargs):
@@ -174,3 +175,26 @@ def auto_move_data(fn: Callable) -> Callable:
         return fn(self, *args, **kwargs)
 
     return auto_transfer_args
+    """
+    def auto_transfer_args(fn):
+      @wraps(fn)
+      def wrapper(self, *args, **kwargs):
+          if not isinstance(self, LightningModule):
+              # Skip if not a LightningModule
+              return fn(self, *args, **kwargs)
+  
+          try:
+              # Default values
+              device = getattr(self, 'device', None)
+              dataloader_idx = 0  # You can make this smarter if needed
+  
+              # Only transfer if device is set (e.g., not during summary/sanity)
+              if device is not None and args:
+                  # args[0] should be the batch
+                  args, kwargs = self.transfer_batch_to_device(args[0], device, dataloader_idx)
+          except Exception as e:
+              print(f"[auto_transfer_args] Skipped transfer_batch_to_device due to: {e}")
+  
+          return fn(self, *args, **kwargs)
+  
+      return wrapper

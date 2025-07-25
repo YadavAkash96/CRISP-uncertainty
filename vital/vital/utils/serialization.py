@@ -3,13 +3,27 @@ import re
 import shutil
 from pathlib import Path
 from typing import Union
-
+import os
 import comet_ml
 from packaging.version import InvalidVersion, Version
 
-from vital import get_vital_home
+# from vital import get_vital_home
 
 logger = logging.getLogger(__name__)
+
+
+ENV_VITAL_HOME = "VITAL_HOME"
+DEFAULT_CACHE_DIR = "~/.cache"
+
+
+def get_vital_home() -> Path:
+    """Resolves the home directory for the `vital` library, used to save/cache data reusable across scripts/runs.
+
+    Returns:
+        Path to the home directory for the `vital` library.
+    """
+    return Path(os.getenv(ENV_VITAL_HOME, os.getenv("XDG_CACHE_HOME", DEFAULT_CACHE_DIR))).expanduser() / "vital"
+
 
 
 def fix_registry_name(registry_name: str) -> str:

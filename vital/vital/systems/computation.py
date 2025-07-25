@@ -44,3 +44,18 @@ class TrainValComputationMixin(SystemComputationMixin, ABC):
         result.update({"early_stop_on": result["val_loss"]})
         self.log_dict(result, **self.val_log_kwargs)
         return result
+        
+    def test_step(self, batch, batch_idx):
+        # Run trainval_step but prefix metrics for testing
+        result = prefix(self.trainval_step(batch, batch_idx), "test_")
+    
+        # Get batch size dynamically for logging
+        if hasattr(batch, "views"):
+            x = batch.views["2CH"].img_proc  # or choose a view dynamically
+        else:
+            x = batch[Tags.img]
+    
+        self.log_dict(result, batch_size=x.size(0), **self.val_log_kwargs)
+        return result
+    
+

@@ -2,7 +2,15 @@ import comet_ml  # noqa
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from vital.runner import VitalRunner
+import sys  
+import warnings
+import os
+# Suppress all warnings
+warnings.filterwarnings("ignore")
 
+# Suppress Albumentations update notification
+os.environ["NO_ALBUMENTATIONS_UPDATE"] = "1"
+sys.path.append("vital")
 
 class Runner(VitalRunner):
     """Abstract runner that runs the main training/val loop, etc. using Lightning Trainer."""
@@ -20,12 +28,13 @@ class Runner(VitalRunner):
         )
 
     @staticmethod
-    @hydra.main(config_path="config", config_name="default.yaml")
+    @hydra.main( version_base="1.1", config_path="config", config_name="default.yaml")
     def run_system(cfg: DictConfig) -> None:
         """Handles the training and evaluation of a model.
 
         Redefined to add @hydra.main decorator with correct config_path and config_name
         """
+        
         return VitalRunner.run_system(cfg)
 
 

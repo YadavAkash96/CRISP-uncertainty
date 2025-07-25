@@ -1,0 +1,3 @@
+_target_: pytorch_lightning.Trainer
+gpus: ${sys.gpus:}
+enable_model_summary: False

@@ -6,5 +6,5 @@ defaults:
 
 budget: 0.3
 
-module:
-  conf_out: True
+#module:
+#  conf_out: True

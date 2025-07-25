@@ -1,10 +1,11 @@
 
 defaults:
+  - _self_
   - vital_default # This references default config from vital.config.vital_default.yaml
   - trainer: default
   - system: uncertainty
   - data: camus
-  - logger: comet/online
+  - logger: comet/offline
   - callbacks:
       - early_stopping
       - model_checkpoint
@@ -13,7 +14,7 @@ defaults:
 # Set comet project name and workspace
 logger:
   project_name: crisp-miccai2022
-  workspace: thierryjudge
+  workspace: akash-yadav
 
 seed: 55
 
@@ -22,4 +23,7 @@ trainer:
 
 callbacks:
   early_stopping:
+    _target_: pytorch_lightning.callbacks.EarlyStopping
+    monitor: val_loss
     patience: 100
+    mode: min

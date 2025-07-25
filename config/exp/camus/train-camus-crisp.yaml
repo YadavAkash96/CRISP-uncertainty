@@ -6,3 +6,8 @@ defaults:
   - override /system: crisp/train
 
 name: ${choices.data}${camus_labels:${data.labels}}-crisp-${seed}.ckpt
+
+# my changes to verify hyperspace saving
+#save_samples_name: ${choices.data}${camus_labels:${data.labels}}-crisp-${seed}-zbar.pt
+#system:
+#  save_samples: /home/zoayada1/intern_thesis_work/RMS_SampleFinder/depends/crisp/checkpoints/${seed}/${save_samples_name}

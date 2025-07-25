@@ -7,7 +7,7 @@ defaults:
 
 system:
   module:
-    dropout: 0.5
+    dropout: 0.25
 
 test: false
 

@@ -19,9 +19,11 @@ from pytorch_lightning.loggers import CometLogger, LightningLoggerBase
 
 from vital.data.data_module import VitalDataModule
 from vital.systems.system import VitalSystem
-from vital.utils.logging import configure_logging
+from vital.utils.logger import configure_logging
 from vital.utils.serialization import resolve_model_checkpoint_path
 
+
+from torch.utils.data import DataLoader
 log = logging.getLogger(__name__)
 
 
@@ -48,7 +50,7 @@ class VitalRunner(ABC):
         OmegaConf.register_new_resolver("sys.num_workers", lambda x=None: os.cpu_count() - 1)
 
     @staticmethod
-    @hydra.main(config_path="config_example", config_name="default.yaml")
+    @hydra.main( version_base="1.1", config_path="config_example", config_name="default.yaml")
     def run_system(cfg: DictConfig) -> None:
         """Handles the training and evaluation of a model.
 
@@ -70,7 +72,7 @@ class VitalRunner(ABC):
             trainer = Trainer(resume_from_checkpoint=cfg.ckpt_path, logger=logger, callbacks=callbacks)
         else:
             trainer: Trainer = hydra.utils.instantiate(cfg.trainer, logger=logger, callbacks=callbacks)
-
+            
             trainer.logger.log_hyperparams(Namespace(**cfg))  # Save config to logger.
 
         if isinstance(trainer.logger, CometLogger):
@@ -98,9 +100,17 @@ class VitalRunner(ABC):
                 assert len(data_shape) == len(system_shape)
                 return tuple([sys_dim or data_dim for sys_dim, data_dim in zip(system_shape, data_shape)])
             return data_shape
-
-        input_shape = concat_shapes(cfg.system.module.input_shape, datamodule.data_params.in_shape)
-        output_shape = concat_shapes(cfg.system.module.output_shape, datamodule.data_params.out_shape)
+        
+        print(f"datamodule image shape:{datamodule.data_params.in_shape}")
+        if cfg.system.module is None:
+            input_shape = datamodule.data_params.in_shape
+            output_shape = datamodule.data_params.out_shape
+        else:
+            input_shape = concat_shapes(cfg.system.module.input_shape, datamodule.data_params.in_shape)
+            output_shape = concat_shapes(cfg.system.module.output_shape, datamodule.data_params.out_shape)
+        
+        #input_shape = concat_shapes(cfg.system.module.input_shape, datamodule.data_params.in_shape)
+        #output_shape = concat_shapes(cfg.system.module.output_shape, datamodule.data_params.out_shape)
 
         # Instantiate module with respect to datamodule's data params.
         module: nn.Module = hydra.utils.instantiate(
@@ -108,10 +118,10 @@ class VitalRunner(ABC):
             input_shape=input_shape,
             output_shape=output_shape,
         )
-
+        
         # Instantiate model with the created module.
         model: VitalSystem = hydra.utils.instantiate(cfg.system, module=module, data_params=datamodule.data_params)
-
+        # print(f"module class:{cfg.system, module, datamodule.data_params}")
         if ckpt_path:  # Load pretrained model if checkpoint is provided
             log.info(f"Loading model from {ckpt_path}")
             model = model.load_from_checkpoint(
@@ -123,6 +133,11 @@ class VitalRunner(ABC):
             model.load_state_dict(torch.load(weights, map_location=model.device)["state_dict"], strict=cfg.strict)
 
         if cfg.train:
+            #print("Model object:", model)
+            #print("Type of model:", type(model))
+            #print("Model forward:", getattr(model, "forward", None))
+            #print("Is forward callable?", callable(getattr(model, "forward", None)))
+            # print(f"train model: {model, datamodule}")
             trainer.fit(model, datamodule=datamodule)
 
             if not cfg.trainer.get("fast_dev_run", False):
@@ -148,14 +163,45 @@ class VitalRunner(ABC):
 
                     # Ensure we use the best weights (and not the latest ones) by loading back the best model
                     model = model.load_from_checkpoint(str(best_model_path), module=module)
+                    cfg.ckpt = str(best_model_path)
+                    print(f"Copied best model from {best_model} to {best_model_path}")
+                    print(f"Setting cfg.ckpt = {cfg.ckpt}")
                 else:  # If checkpoint callback is not used, save current model.
                     trainer.save_checkpoint(best_model_path)
 
                 if isinstance(trainer.logger, CometLogger):
                     trainer.logger.experiment.log_model("model", trainer.checkpoint_callback.best_model_path)
+                
+                # if not isinstance(cfg.system.save_samples, (str, Path)):
+                #     raise ValueError(f"Expected save_samples to be a file path, got: {cfg.system.save_samples}")
 
+        
         if cfg.test:
-            trainer.test(model, datamodule=datamodule)
+            # test_data_path = Path("/home/zoayada1/intern_thesis_work/RMS_SampleFinder/depends/crisp/config/data/test_data/my_custom_dataset.h5")
+            # print("Datamodule attributes:", dir(datamodule))
+            # Manually create the dataset
+            # test_dataset = H5Dataset(test_data_path)
+            # print(f"test dataset =>>>>>>>>>>>>> {test_dataset}")
+            # Replace datamodule's test_dataloader with a lambda that returns our DataLoader
+            # datamodule.test_dataloader = lambda: DataLoader(
+            #                             test_dataset,
+            #                             batch_size=1,
+            #                             shuffle=False,
+            #                             num_workers=0,
+            #                             pin_memory=True
+            #                             )
+            datamodule.setup("test")
+            # test_loader = datamodule.test_dataloader()
+            # print(f"Loaded {len(test_loader.dataset)} test samples.")   
+            ckpt_path = cfg.get("ckpt", "best")  # fallback to best if not set
+            print(f"Testing using checkpoint: {ckpt_path}")
+            print("Model passed to trainer:", type(model))
+            print("Has test_step:", hasattr(model, "test_step"))
+            
+            # print("Test Datamodule :", datamodule.test_dataloader)
+            
+            # trainer.test(model, datamodule=datamodule)
+            trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
 
     @classmethod
     def _check_cfg(cls, cfg: DictConfig) -> DictConfig:
